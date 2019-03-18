@@ -1,5 +1,5 @@
 # Import required modules
-from imutils.object_detection import non_max_suppression 
+# from imutils.object_detection import non_max_suppression
 import cv2 as cv
 import math
 import argparse
@@ -34,6 +34,10 @@ parser.add_argument('--thr',type=float, default=0.5,
 parser.add_argument('--nms',type=float, default=0.4,
                     help='Non-maximum suppression threshold.'
                    )
+
+parser.add_argument("--p", "--padding", type=float, default=0.0,
+        help="amount of padding to add to each border of ROI")
+
 
 args = parser.parse_args()
 
@@ -101,7 +105,7 @@ if __name__ == "__main__":
     inpWidth = args.width
     inpHeight = args.height
     model = args.model
-
+    padding = args.p
     
     # Load network
     net = cv.dnn.readNet(model)
@@ -135,6 +139,8 @@ if __name__ == "__main__":
          # image =np.array(bytearray(frame), dtype=np.uint8)
          # image = cv.imdecode(image,cv.IMREAD_COLOR)
 
+         #copy of the frame
+         orig = frame.copy()
 
          # Get frame height and width
          height_ = frame.shape[0]
@@ -158,41 +164,36 @@ if __name__ == "__main__":
          # Apply NMS
          indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold,nmsThreshold)
          results = []
+         
          for i in indices:
             # get 4 corners of the rotated rect
             vertices = cv.boxPoints(boxes[i[0]])
-            config = ("-l eng --oem 1 --psm 7 ")
+           # config = ("-l eng --oem 1 --psm 7 ")
             # scale the bounding box coordinates based on the respective ratios
             for j in range(4):
                 vertices[j][0] *= rW
                 vertices[j][1] *= rH
+
             for j in range(4):
+
                 p1 = (vertices[j][0], vertices[j][1])
                 p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
                 cv.line(frame, p1, p2, (0, 255, 0), 2, cv.LINE_AA);
-            text = pytesseract.image_to_string(vertices, config=config) 
-            results.append(((p1,p2), text))
-              
-
-                # cv.putTextext(frame, "{:.3f}".format(confidences[i[0]]), (vertices[0][0], vertices[0][1]), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv.LINE_AA)
-                            
-          #Applying Tesseract
-         # config = ("-l eng --oem 1 --psm 7")
-        # text = pytesseract.image_to_string(frame,config=config)
-
-        # Put efficiency information
-
-         for ((p1,p2), text) in results:
-
-           text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
-
-           cv.putText(frame, text, (0,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255),3)
-        
-        # image =np.array(bytearray(frame), dtype=np.uint8)
-        # image = cv.imdecode(image,cv.IMREAD_COLOR)
+                line = cv.line(frame, p1, p2, (0, 255, 0), 2, cv.LINE_AA)
+                config= ("-l eng --oem 1 --psm 3")
+                text= pytesseract.image_to_string(line, config=config)
+                print("OCR TEXT")
+                print("========")
+                print("{}\n".format(text))
+                
+               # cv.putText(frame, text, (vertices[0][0],vertices[0][1]), cv.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255),1)
+                cv.putText(frame, "{:.3f}".format(confidences[i[0]]), (vertices[0][0], vertices[0][1]), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv.LINE_AA)
+                     
+          
+         cv.putText(frame, label, (0,15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+          # Display the frame
+         cv.imshow(kWinName, frame)
+       # cv.imwrite(file, frame)
+         cv.imwrite("out-{}.jpg",frame)
 
 
-        # Display the frame
-           cv.imshow(kWinName, frame)
-        # cv.imwrite(file, frame)
-           cv.imwrite("out-{}.jpg",frame)
